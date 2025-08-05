@@ -1,4 +1,4 @@
-// todo.js
+// bikin todo.js
 const express = require("express");
 const router = express.Router();
 

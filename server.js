@@ -3,6 +3,7 @@ const express = require("express");
 const app = express();
 const port = 3001;
 
+//tambahin todos
 const todoRoutes = require("./routes/todo.js");
 const { todos } = require("./routes/todo.js");
 
@@ -28,3 +29,4 @@ app.use((req, res) => {
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });
+
