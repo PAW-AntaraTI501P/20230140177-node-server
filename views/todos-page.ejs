@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
+    <title>Daftar Tugas Saya</title>
+    <style>
+      .task-actions {
+        min-width: 180px;
+        text-align: right;
+      }
+      .completed {
+        text-decoration: line-through;
+        color: #6c757d;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container mt-5">
+      <h1>Daftar Tugas Saya</h1>
+      <p>Ini adalah halaman daftar tugas saya.</p>
+
+      <hr />
+
+      <h3 class="mt-4">Tambah Tugas Baru</h3>
+      <form id="addTodoForm" class="mb-4">
+        <div class="input-group">
+          <input
+            type="text"
+            id="newTask"
+            class="form-control"
+            placeholder="Tulis tugas baru di sini..."
+            required
+          />
+          <div class="input-group-append">
+            <button class="btn btn-success" type="submit">Tambah Tugas</button>
+          </div>
+        </div>
+      </form>
+
+      <hr />
+
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="mb-0">Daftar Tugas</h3>
+        <button id="refreshBtn" class="btn btn-info btn-sm">Refresh Data</button>
+      </div>
+      
+      <div id="todosContainer">
+        <% if (todos && todos.length > 0) { %>
+        <ul class="list-group">
+          <% todos.forEach(function(todo) { %>
+          <li class="list-group-item <%= todo.completed ? 'completed' : '' %>" data-id="<%= todo.id %>">
+            <div
+              class="d-flex justify-content-between align-items-center"
+              id="view-<%= todo.id %>"
+            >
+              <span>
+                ID: <%= todo.id %> | 
+                Tugas: <%= todo.task %> |
+                Status: <%= todo.completed ? 'Selesai' : 'Belum Selesai' %>
+              </span>
+              <div class="task-actions">
+                <% if (!todo.completed) { %>
+                <button
+                  class="btn btn-success btn-sm mr-2"
+                  onclick="completeTodo('<%= todo.id %>')"
+                >
+                  Selesai
+                </button>
+                <% } %>
+                <button
+                  class="btn btn-warning btn-sm mr-2"
+                  onclick="toggleEdit('<%= todo.id %>')"
+                >
+                  Edit
+                </button>
+                <button 
+                  class="btn btn-danger btn-sm" 
+                  onclick="deleteTodo('<%= todo.id %>')"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+
+            <div id="edit-<%= todo.id %>" style="display: none">
+              <form onsubmit="updateTodo(event, '<%= todo.id %>')">
+                <div class="input-group">
+                  <input
+                    type="text"
+                    id="edit-task-<%= todo.id %>"
+                    class="form-control"
+                    value="<%= todo.task %>"
+                    required
+                  />
+                  <div class="input-group-append">
+                    <button class="btn btn-primary btn-sm" type="submit">
+                      Simpan
+                    </button>
+                    <button
+                      class="btn btn-secondary btn-sm"
+                      type="button"
+                      onclick="toggleEdit('<%= todo.id %>')"
+                    >
+                      Batal
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </li>
+          <% }); %>
+        </ul>
+        <% } else { %>
+        <p>Tidak ada tugas yang tersedia.</p>
+        <% } %>
+      </div>
+
+      <a href="/" class="btn btn-primary mt-4">Go to Home</a>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+      // Toggle edit form
+      function toggleEdit(id) {
+        const viewDiv = document.getElementById("view-" + id);
+        const editDiv = document.getElementById("edit-" + id);
+
+        if (viewDiv.style.display !== "none") {
+          viewDiv.style.display = "none";
+          editDiv.style.display = "block";
+        } else {
+          viewDiv.style.display = "flex";
+          editDiv.style.display = "none";
+        }
+      }
+
+      // Add new todo
+      document.getElementById('addTodoForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const task = document.getElementById('newTask').value;
+        
+        try {
+          const response = await axios.post('/todos', { task });
+          alert('Tugas berhasil ditambahkan!');
+          document.getElementById('newTask').value = '';
+          window.location.reload();
+        } catch (error) {
+          console.error('Error adding todo:', error);
+          alert('Gagal menambahkan tugas');
+        }
+      });
+
+      // Update todo
+      async function updateTodo(e, id) {
+        e.preventDefault();
+        const updatedTask = document.getElementById(`edit-task-${id}`).value;
+        
+        try {
+          await axios.put(`/todos/${id}`, { task: updatedTask });
+          alert('Tugas berhasil diperbarui!');
+          window.location.reload();
+        } catch (error) {
+          console.error('Error updating todo:', error);
+          alert('Gagal memperbarui tugas');
+        }
+      }
+
+      // Delete todo
+      async function deleteTodo(id) {
+        if (confirm('Apakah Anda yakin ingin menghapus tugas ini?')) {
+          try {
+            await axios.delete(`/todos/${id}`);
+            alert('Tugas berhasil dihapus!');
+            window.location.reload();
+          } catch (error) {
+            console.error('Error deleting todo:', error);
+            alert('Gagal menghapus tugas');
+          }
+        }
+      }
+
+      // Complete todo
+      async function completeTodo(id) {
+        try {
+          await axios.patch(`/todos/${id}/complete`);
+          alert('Tugas ditandai sebagai selesai!');
+          window.location.reload();
+        } catch (error) {
+          console.error('Error completing todo:', error);
+          alert('Gagal menandai tugas sebagai selesai');
+        }
+      }
+
+      // Refresh data
+      document.getElementById('refreshBtn').addEventListener('click', function() {
+        window.location.reload();
+      });
+    </script>
+  </body>
+</html>
