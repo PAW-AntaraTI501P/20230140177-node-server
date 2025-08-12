@@ -1,18 +1,15 @@
-const express = require("express");
 require("dotenv").config();
+const express = require("express");
 const app = express();
-const port = process.env.PORT;
+const cors = require("cors");
+const port = process.env.PORT || 3001;
+const db = require("./database/db");
 
 // Middleware
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.set("view engine", "ejs");
-
-// In-memory database for todos
-let todos = [
-  { id: 1, task: "Belajar Node.js", completed: false },
-  { id: 2, task: "Buat aplikasi TODO", completed: false },
-];
 
 // Routes
 app.get("/", (req, res) => {
@@ -25,12 +22,24 @@ app.get("/contact", (req, res) => {
 
 // GET all todos (API endpoint)
 app.get("/todos", (req, res) => {
-  res.json(todos);
+  db.query("SELECT * FROM todos", (err, results) => {
+    if (err) {
+      console.error("Database error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(results);
+  });
 });
 
-// GET todos page
-app.get("/todos-list", (req, res) => {
-  res.render("todos-page", { todos: todos });
+// GET todos view page
+app.get("/todo-view", (req, res) => {
+  db.query("SELECT * FROM todos", (err, todos) => {
+    if (err) {
+      console.error("Database error:", err);
+      return res.status(500).send("Internal server error");
+    }
+    res.render("todo", { todos });
+  });
 });
 
 // POST - Create a new todo
@@ -39,55 +48,55 @@ app.post("/todos", (req, res) => {
   if (!task) {
     return res.status(400).json({ error: "Task is required" });
   }
-  
-  const newTodo = {
-    id: todos.length > 0 ? Math.max(...todos.map(t => t.id)) + 1 : 1,
-    task,
-    completed: false
-  };
-  
-  todos.push(newTodo);
-  res.status(201).json(newTodo);
+
+  db.query("INSERT INTO todos (task) VALUES (?)", [task], (err, result) => {
+    if (err) {
+      console.error("Database error:", err);
+      return res.status(500).json({ error: "Failed to save to database" });
+    }
+    res.status(201).json({
+      id: result.insertId,
+      task,
+      completed: false
+    });
+  });
 });
 
 // PUT - Update a todo
 app.put("/todos/:id", (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = req.params.id;
   const { task } = req.body;
-  
-  const todoIndex = todos.findIndex(t => t.id === id);
-  if (todoIndex === -1) {
-    return res.status(404).json({ error: "Todo not found" });
-  }
-  
-  todos[todoIndex].task = task;
-  res.json(todos[todoIndex]);
-});
 
-// PATCH - Mark todo as complete
-app.patch("/todos/:id/complete", (req, res) => {
-  const id = parseInt(req.params.id);
-  
-  const todoIndex = todos.findIndex(t => t.id === id);
-  if (todoIndex === -1) {
-    return res.status(404).json({ error: "Todo not found" });
-  }
-  
-  todos[todoIndex].completed = true;
-  res.json(todos[todoIndex]);
+  db.query(
+    "UPDATE todos SET task = ? WHERE id = ?",
+    [task, id],
+    (err, result) => {
+      if (err) {
+        console.error("Database error:", err);
+        return res.status(500).json({ error: "Database error" });
+      }
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "Todo not found" });
+      }
+      res.json({ id, task });
+    }
+  );
 });
 
 // DELETE - Remove a todo
 app.delete("/todos/:id", (req, res) => {
-  const id = parseInt(req.params.id);
-  
-  const todoIndex = todos.findIndex(t => t.id === id);
-  if (todoIndex === -1) {
-    return res.status(404).json({ error: "Todo not found" });
-  }
-  
-  todos = todos.filter(t => t.id !== id);
-  res.json({ message: "Todo deleted successfully" });
+  const id = req.params.id;
+
+  db.query("DELETE FROM todos WHERE id = ?", [id], (err, result) => {
+    if (err) {
+      console.error("Database error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Todo not found" });
+    }
+    res.json({ message: "Todo deleted successfully" });
+  });
 });
 
 // 404 handler
