@@ -22,7 +22,7 @@ module.exports = function (req, res, next) {
         // Verifikasi token
         const decoded = jwt.verify(token, "your_super_secret_jwt_key"); // Gunakan secret key yang sama
 
-        // Tambahkan user dari payload token ke object request
+        // Tambahkan user dari payload token ke object request//
         req.user = decoded;
         next();
     } catch (e) {
